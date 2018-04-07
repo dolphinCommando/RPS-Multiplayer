@@ -8,7 +8,43 @@
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-  
+  <header class="container">
+    <h1>Rock Paper Scissors</h1>
+  </header>
+
+  <div class="container" id="player-name">
+    <form>
+      <label for="get-player">Enter your gamer tag</label>
+      <input type="text" id="player-get">
+      <button type="submit" id="player-submit">Submit</button>
+    </form>
+  </div>
+
+  <div class="container" id="player-turn">
+    <p>Turn 0</p>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-3 game" id="game-player1"></div>
+      <div class="col-3 game" id="game-results"></div>
+      <div class="col-3 game" id="game-player2"></div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row">
+      <div class="col-8 offset-2">
+        <div id="chat-output"></div>
+        <div>
+          <form>
+            <input type="text" id="chat-input">
+            <button type="submit" id="chat-submit">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
   <script src="https://www.gstatic.com/firebasejs/4.12.1/firebase.js"></script>
