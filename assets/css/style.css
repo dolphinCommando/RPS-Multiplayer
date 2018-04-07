@@ -1,0 +1,25 @@
+
+body {
+	background-color: #9933cc;
+}
+
+
+.container {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 30px;
+}
+
+.game {
+	width: 300px;
+	height: 300px;
+	border-style: solid;
+	border-width: 3px;
+}
+
+#chat-output {
+	border-style: solid;
+	border-width: 2px;
+	padding: 100px 200px;
+	background-color: white;
+}
