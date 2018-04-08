@@ -20,6 +20,9 @@ body {
 #chat-output {
 	border-style: solid;
 	border-width: 2px;
-	padding: 100px 200px;
+	width: 500px;
+	height: 150px;
 	background-color: white;
+	display: flex;
+	justify-content: flex-start;
 }
