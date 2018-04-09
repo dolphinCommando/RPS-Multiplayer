@@ -12,12 +12,21 @@
   var index=0;
   var playerIndex = index;
 
+  var turns = -1;
+
+  var gamelogic = {
+    'rock': {'paper': 'loses', 'scissors': 'wins'},
+    'paper': {'scissors': 'loses', 'rock': 'wins'},
+    'scissors': {'rock': 'loses', 'paper': 'wins'}
+  };
+
   const database = firebase.database();
 
   database.ref().child('index').set({'value': index});
+  database.ref().child('turns').set({'value': turns});
   
-  var ref1 = database.ref('players/one');
-  var ref2 = database.ref('players/two');
+  var ref1 = database.ref('players/1');
+  var ref2 = database.ref('players/2');
   const connectedRef = firebase.database().ref('.info/connected');
   connectedRef.on('value', function(snap) {
     if (snap.val() === true) {
@@ -29,20 +38,17 @@
       else if(index===0) {
         ref2.onDisconnect().remove();
       } else {console.log('Index out of bounds');}
-      
-      
+        
     } else {
       console.log('Disconnected');
-      //console.log(snap.val());   
-      
+      //console.log(snap.val());     
     }
   });
 
   $('#player-submit').click(function(event) {
     event.preventDefault();
     var playerName = $('#player-get').val();
-    var title = (playerIndex===0) ? 'one' : 'two';
-    var newRef = database.ref().child(`players/${title}`);
+    var newRef = database.ref().child(`players/${index}`);
     newRef.set({
            'name': playerName,
            'losses': 0,
@@ -75,42 +81,35 @@
 
   database.ref('players').on('child_added', function(snapshot) {
     //console.log('Child added ' + JSON.stringify(snapshot.val()));
-    database.ref('index').set({
+    if((index+1)===2) {
+      database.ref('turns').update({
+        'value': 0
+      });
+    }
+    database.ref('index').update({
       'value': (index + 1)%2
     });
-    renderBoard(snapshot.child('playerindex').val(), snapshot.child('name').val(), snapshot.child('wins').val(), snapshot.child('losses').val(), snapshot.child('choice').val());
-    
-  });
-
-  database.ref('players').on('value', function(snapshot) {
-    //console.log('Players value ' + JSON.stringify(snapshot.val()));
-    //console.log('Snapshot val' + JSON.stringify(snapshot.val()));
-    //console.log('Snapshot index key '+ snapshot.child('index').val());
+    var playerBoard = getPlayerByIndex(snapshot.val().playerindex);
+    if (typeof playerBoard !== 'string') {
+      playerBoard.html(`
+      <h2>${snapshot.val().name}</h2>
+      <p>Wins: ${snapshot.val().wins}  Losses: ${snapshot.val().losses}</p>
+    `)
+    } else console.log(playerBoard);
     
   });
 
   database.ref('index').on('value', function(snapshot) {
     index = snapshot.val().value;  
     playerIndex = index;
-  })
+  });
 
+    /*
+      <p class="choice" data-index="${idx}">Rock</p>
+      <p class="choice" data-index="${idx}">Paper</p>
+      <p class="choice" data-index="${idx}">Scissors</p>
 
-  function renderBoard(idx, name, wins, losses, choice) {
-    var playerBoard;
-    if (idx === 0) {
-      playerBoard = $('#game-player1');
-    } 
-    else if (idx === 1) {
-      playerBoard = $('#game-player2');
-    } else {console.log('Error: index out of bounds ' + idx);}
-
-    playerBoard.html(`
-      <p data-name="${name}" class="pname">${name}</p>
-      <p class="choice">Rock</p>
-      <p class="choice">Paper</p>
-      <p class="choice">Scissors</p>
-      <p>Wins: ${wins}  Losses: ${losses}</p>
-    `)
+    
 
     if(choice==='Rock' || choice==='Paper' || choice==='Scissors'){
       playerBoard.html(`
@@ -118,18 +117,80 @@
         <h2>${choice}</h2>
       `)
     }
-  }
+
+    */
+  
 
   $('body').on('click', '.choice', function(event) {
     event.preventDefault();
     var choice = $(this).text();
-    var name = $('.pname').attr('data-name');
-    var ref = database.ref(`players/${name}`);
+    var idx = $(this).attr('data-index');
+    var ref = database.ref(`players/${idx}`);
     ref.update({
       'choice': choice
+      });
+    database.ref('turns').update({
+      'value': turns+1
     });
+    $(`#board${idx}`).html(`<p>You chose: </p><h3>${choice}</h3>`);
+   });
+
+    database.ref('players').on('child_removed', function(snap) {
+      $('#chat-output').append(`<p>${snap.val().name} has disconnected.`);
+      index = (index - 1)%2;
+    });
+
+    database.ref().on('value', function(snap) {
+      turns = snap.val().turns.value;
+      console.log(turns);
+      if (turns===0) {
+        renderBoard(0);  
+      }
+      else if(turns==1) {
+        renderBoard(2);
+      } else if(turns===2) {
+        var choice1 = snapshot.val().players[0].choice;
+        var choice2 = snapshot.val().players[1].choice;
+        var result = gamelogic[choice1.toLowerCase()][choice2.toLowerCase()];
+        if(result==='wins') {
+          $('#game-results').html('Player 1 wins!');
+        } else if(result==='loses') {
+          $('#game-results').html('Player 2 wins!');
+        } else {console.log('Could not determine game results.');}
+
+      }  
+    
+    });
+
+    function renderBoard(idx) {
+      var player = getPlayerByIndex(idx);
+      if (typeof player !== 'string') {
+        player.append(`
+        <div id="board${idx}">
+          <p class="choice" data-index="${idx}">Rock</p>
+          <p class="choice" data-index="${idx}">Paper</p>
+          <p class="choice" data-index="${idx}">Scissors</p>
+        </div>
+        `)
+
+      } else console.log(player);
+
+    }
+
+    function getPlayerByIndex(idx) {
+      if (idx === 0) {
+        return $('#game-player1');
+      } 
+      else if (idx === 1) {
+        return $('#game-player2');
+      } else {return 'Error: index out of bounds ' + idx}
+      
+    }
+
+
+    
    
-  })
+
 
   
 

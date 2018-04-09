@@ -1,9 +1,12 @@
 
 body {
-	background-color: #9933cc;
+	background-color: grey;
 }
 
-
+header {
+	background-color: darkslategrey;
+	color: lightblue;
+}
 .container {
 	display: flex;
 	justify-content: center;
@@ -28,5 +31,6 @@ body {
 }
 
 .choice:hover {
-	background-color: chartreuse;
+	background-color: lightblue;
 }
+
