@@ -15,22 +15,34 @@
   const database = firebase.database();
 
   database.ref().child('index').set({'value': index});
-
+  
+  var ref1 = database.ref('players/one');
+  var ref2 = database.ref('players/two');
   const connectedRef = firebase.database().ref('.info/connected');
   connectedRef.on('value', function(snap) {
     if (snap.val() === true) {
       console.log('Connected');
-      console.log(snap.val());
+      //console.log(snap.val());
+      if(index===1) {
+        ref1.onDisconnect().remove();
+      } 
+      else if(index===0) {
+        ref2.onDisconnect().remove();
+      } else {console.log('Index out of bounds');}
+      
+      
     } else {
       console.log('Disconnected');
-      console.log(snap.val());    
+      //console.log(snap.val());   
+      
     }
   });
 
   $('#player-submit').click(function(event) {
     event.preventDefault();
     var playerName = $('#player-get').val();
-    var newRef = database.ref().child('players').push();
+    var title = (playerIndex===0) ? 'one' : 'two';
+    var newRef = database.ref().child(`players/${title}`);
     newRef.set({
            'name': playerName,
            'losses': 0,
@@ -62,7 +74,7 @@
 
 
   database.ref('players').on('child_added', function(snapshot) {
-    console.log('Child added ' + JSON.stringify(snapshot.val()));
+    //console.log('Child added ' + JSON.stringify(snapshot.val()));
     database.ref('index').set({
       'value': (index + 1)%2
     });
@@ -71,8 +83,8 @@
   });
 
   database.ref('players').on('value', function(snapshot) {
-    console.log('Players value ' + JSON.stringify(snapshot.val()));
-    console.log('Snapshot val' + JSON.stringify(snapshot.val()));
+    //console.log('Players value ' + JSON.stringify(snapshot.val()));
+    //console.log('Snapshot val' + JSON.stringify(snapshot.val()));
     //console.log('Snapshot index key '+ snapshot.child('index').val());
     
   });
@@ -93,13 +105,31 @@
     } else {console.log('Error: index out of bounds ' + idx);}
 
     playerBoard.html(`
-      <p data-name="${name}">${name}</p>
+      <p data-name="${name}" class="pname">${name}</p>
       <p class="choice">Rock</p>
       <p class="choice">Paper</p>
       <p class="choice">Scissors</p>
       <p>Wins: ${wins}  Losses: ${losses}</p>
     `)
+
+    if(choice==='Rock' || choice==='Paper' || choice==='Scissors'){
+      playerBoard.html(`
+        <p data-name="${name}" class="pname">${name}</p>
+        <h2>${choice}</h2>
+      `)
+    }
   }
+
+  $('body').on('click', '.choice', function(event) {
+    event.preventDefault();
+    var choice = $(this).text();
+    var name = $('.pname').attr('data-name');
+    var ref = database.ref(`players/${name}`);
+    ref.update({
+      'choice': choice
+    });
+   
+  })
 
   
 
