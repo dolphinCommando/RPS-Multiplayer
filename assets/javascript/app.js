@@ -15,9 +15,9 @@
   var turns = -1;
 
   var gamelogic = {
-    'rock': {'rock-paper': 'loses', 'rock-scissors': 'wins'},
-    'paper': {'paper-scissors': 'loses', 'paper-rock': 'wins'},
-    'scissors': {'scissors-rock': 'loses', 'scissors-paper': 'wins'}
+    'rock': {'rock-paper': 'loses', 'rock-scissors': 'wins', 'rock-rock': 'tie'},
+    'paper': {'paper-scissors': 'loses', 'paper-rock': 'wins', 'paper-paper': 'tie'},
+    'scissors': {'scissors-rock': 'loses', 'scissors-paper': 'wins', 'scissors-scissors': 'tie'}
   };
 
   const database = firebase.database();
@@ -32,12 +32,16 @@
     if (snap.val() === true) {
       console.log('Connected');
       //console.log(snap.val());
-      if(index===1) {
+      var idx = $('#player-name').attr('data-playerindex');
+      //console.log(idx);
+      if(idx===0) {
         ref1.onDisconnect().remove();
       } 
-      else if(index===0) {
+      else if(idx===1) {
         ref2.onDisconnect().remove();
-      } else {console.log('Index out of bounds');}
+      } else {
+        //console.log('Index out of bounds');
+        }
         
     } else {
       console.log('Disconnected');
@@ -57,7 +61,7 @@
            'playerindex': playerIndex
 
       });
-      $('#player-container').html(`<p>Welcome <span id="player-name">${playerName}</span></p>`);
+      $('#player-container').html(`<p>Welcome <span id="player-name" data-playerindex="${playerIndex}">${playerName}</span></p>`);
   });
   
   $('#chat-submit').click(function(event) {
@@ -94,8 +98,9 @@
     if (!playerBoard.includes('Error')) {
       $(playerBoard).html(`
       <h2>${snapshot.val().name}</h2>
-      <p>Wins: ${snapshot.val().wins}  Losses: ${snapshot.val().losses}</p>
       <div class="options"></div>
+      <p id="p${snapshot.val().playerindex}-wins">Wins: 0</p>
+      <p id="p${snapshot.val().playerindex}-losses">Losses: 0</p>
     `)
     } else console.log(playerBoard);
     
@@ -118,6 +123,8 @@
     database.ref('turns').update({
       'value': turns+1
     });
+
+    //console.log($('#player-name').attr('data-playerindex'));
     
    });
 
@@ -126,6 +133,9 @@
       index = (index - 1)%2;
     });
 
+
+
+
     database.ref().on('value', function(snap) {
       turns = snap.val().turns.value;
       if(turns!==-1) {
@@ -133,46 +143,64 @@
         var p2 = snap.val().players[1];
       }
       
-      console.log(turns);
+      //console.log(turns);
       if (turns===0) {
-        renderBoard(0, '');  
+        renderBoard(0, '', p1.wins, p1.losses);  
       }
       else if(turns==1) {
-        renderBoard(1, '');
-        renderBoard(0, p1.choice)
+        renderBoard(1, '', p2.wins, p2.losses);
+        renderBoard(0, p1.choice, p1.wins, p1.losses);
       } else if(turns===2) {
-        renderBoard(1, p2.choice);
+        renderBoard(1, p2.choice, p2.wins, p2.losses);
+        renderBoard(0, p1.choice, p1.wins, p1.losses);
         var choice1 = p1.choice;
         var choice2 = p2.choice;
         var result = gamelogic[choice1.toLowerCase()][`${choice1.toLowerCase()}-${choice2.toLowerCase()}`];
         if(result==='wins') {
           $('#game-results').html('Player 1 wins!');
-          database.ref('players/0').update({
-            'wins': p1.wins++  
-          });
-          database.ref('players/1').update({
-            'losses': p2.losses++
-          });
+          
         } else if(result==='loses') {
           $('#game-results').html('Player 2 wins!');
-          database.ref('players/0').update({
-            'wins': p2.wins++
-          });
-          database.ref('players/1').update({
-            'losses': p1.losses++
-          });
-        } else {console.log('Could not determine game results.');}
+          
+        } else if(result==='tie') {
+          //console.log('Could not determine game results.');
+          $('#game-results').html('Tie!');
+        }
+        var p1wins = p1.wins;
+        var p2wins = p2.wins;
+        var p1losses = p1.losses;
+        var p2losses = p2.losses;
 
         setTimeout(function() {
           database.ref('turns').update({
             'value': 0
           });
-        }, 5*1000);
+          $('.options').empty();
+          
+          if (result==='wins') {
+            database.ref('players').child('0').update({
+              'wins': p1wins+1  
+            });
+            database.ref('players').child('1').update({
+              'losses': p2losses+1
+            });
+
+          } else if (result==='loses') {
+            database.ref('players').child('1').update({
+              'wins': p2wins+1
+            });
+            database.ref('players').child('0').update({
+              'losses': p1losses+1
+            });
+          }
+          $('#game-results').empty();  
+        }, 3*1000);
       }  
     
     });
 
-    function renderBoard(idx, choice) {
+    
+    function renderBoard(idx, choice, wins, losses) {
       var player = getPlayerByIndex(idx);
       if (!player.includes('Error')) {
         if (choice==='Rock' || choice==='Paper' || choice==='Scissors') {
@@ -186,7 +214,15 @@
           `);
           //$(player).style('border-color', 'red');
         }
+        /*
+        if($('#player-name').attr('data-playerindex')!==idx) {
+          $(`${getPlayerByIndex((idx+1)%2)} .options`).html('Waiting for response');
+        }*/
       } else console.log(player);
+
+      $(`#p${idx}-wins`).html(`Wins: ${wins}`);
+      $(`#p${idx}-losses`).html(`Losses: ${wins}`);
+
 
     }
 
@@ -199,6 +235,8 @@
       } else {return 'Error: index out of bounds ' + idx}
       
     }
+
+
 
 
     
