@@ -15,9 +15,9 @@
   var turns = -1;
 
   var gamelogic = {
-    'rock': {'paper': 'loses', 'scissors': 'wins'},
-    'paper': {'scissors': 'loses', 'rock': 'wins'},
-    'scissors': {'rock': 'loses', 'paper': 'wins'}
+    'rock': {'rock-paper': 'loses', 'rock-scissors': 'wins'},
+    'paper': {'paper-scissors': 'loses', 'paper-rock': 'wins'},
+    'scissors': {'scissors-rock': 'loses', 'scissors-paper': 'wins'}
   };
 
   const database = firebase.database();
@@ -25,8 +25,8 @@
   database.ref().child('index').set({'value': index});
   database.ref().child('turns').set({'value': turns});
   
-  var ref1 = database.ref('players/1');
-  var ref2 = database.ref('players/2');
+  var ref1 = database.ref('players/0');
+  var ref2 = database.ref('players/1');
   const connectedRef = firebase.database().ref('.info/connected');
   connectedRef.on('value', function(snap) {
     if (snap.val() === true) {
@@ -89,11 +89,13 @@
     database.ref('index').update({
       'value': (index + 1)%2
     });
+
     var playerBoard = getPlayerByIndex(snapshot.val().playerindex);
-    if (typeof playerBoard !== 'string') {
-      playerBoard.html(`
+    if (!playerBoard.includes('Error')) {
+      $(playerBoard).html(`
       <h2>${snapshot.val().name}</h2>
       <p>Wins: ${snapshot.val().wins}  Losses: ${snapshot.val().losses}</p>
+      <div class="options"></div>
     `)
     } else console.log(playerBoard);
     
@@ -103,22 +105,6 @@
     index = snapshot.val().value;  
     playerIndex = index;
   });
-
-    /*
-      <p class="choice" data-index="${idx}">Rock</p>
-      <p class="choice" data-index="${idx}">Paper</p>
-      <p class="choice" data-index="${idx}">Scissors</p>
-
-    
-
-    if(choice==='Rock' || choice==='Paper' || choice==='Scissors'){
-      playerBoard.html(`
-        <p data-name="${name}" class="pname">${name}</p>
-        <h2>${choice}</h2>
-      `)
-    }
-
-    */
   
 
   $('body').on('click', '.choice', function(event) {
@@ -132,7 +118,7 @@
     database.ref('turns').update({
       'value': turns+1
     });
-    $(`#board${idx}`).html(`<p>You chose: </p><h3>${choice}</h3>`);
+    
    });
 
     database.ref('players').on('child_removed', function(snap) {
@@ -142,47 +128,74 @@
 
     database.ref().on('value', function(snap) {
       turns = snap.val().turns.value;
+      if(turns!==-1) {
+        var p1 = snap.val().players[0];
+        var p2 = snap.val().players[1];
+      }
+      
       console.log(turns);
       if (turns===0) {
-        renderBoard(0);  
+        renderBoard(0, '');  
       }
       else if(turns==1) {
-        renderBoard(2);
+        renderBoard(1, '');
+        renderBoard(0, p1.choice)
       } else if(turns===2) {
-        var choice1 = snapshot.val().players[0].choice;
-        var choice2 = snapshot.val().players[1].choice;
-        var result = gamelogic[choice1.toLowerCase()][choice2.toLowerCase()];
+        renderBoard(1, p2.choice);
+        var choice1 = p1.choice;
+        var choice2 = p2.choice;
+        var result = gamelogic[choice1.toLowerCase()][`${choice1.toLowerCase()}-${choice2.toLowerCase()}`];
         if(result==='wins') {
           $('#game-results').html('Player 1 wins!');
+          database.ref('players/0').update({
+            'wins': p1.wins++  
+          });
+          database.ref('players/1').update({
+            'losses': p2.losses++
+          });
         } else if(result==='loses') {
           $('#game-results').html('Player 2 wins!');
+          database.ref('players/0').update({
+            'wins': p2.wins++
+          });
+          database.ref('players/1').update({
+            'losses': p1.losses++
+          });
         } else {console.log('Could not determine game results.');}
 
+        setTimeout(function() {
+          database.ref('turns').update({
+            'value': 0
+          });
+        }, 5*1000);
       }  
     
     });
 
-    function renderBoard(idx) {
+    function renderBoard(idx, choice) {
       var player = getPlayerByIndex(idx);
-      if (typeof player !== 'string') {
-        player.append(`
-        <div id="board${idx}">
-          <p class="choice" data-index="${idx}">Rock</p>
-          <p class="choice" data-index="${idx}">Paper</p>
-          <p class="choice" data-index="${idx}">Scissors</p>
-        </div>
-        `)
-
+      if (!player.includes('Error')) {
+        if (choice==='Rock' || choice==='Paper' || choice==='Scissors') {
+          $(`${player} .options`).html(`<p>You chose: </p><h3>${choice}</h3>`);
+        }
+        else {
+          $(`${player} .options `).html(`
+            <p class="choice" data-index="${idx}">Rock</p>
+            <p class="choice" data-index="${idx}">Paper</p>
+            <p class="choice" data-index="${idx}">Scissors</p>
+          `);
+          //$(player).style('border-color', 'red');
+        }
       } else console.log(player);
 
     }
 
     function getPlayerByIndex(idx) {
       if (idx === 0) {
-        return $('#game-player1');
+        return '#game-player1';
       } 
       else if (idx === 1) {
-        return $('#game-player2');
+        return '#game-player2';
       } else {return 'Error: index out of bounds ' + idx}
       
     }
